@@ -1,6 +1,10 @@
 ---
 name: Feature Request
 about: Propose an idea for the project
+title: ''
+labels: ''
+assignees: ''
+
 ---
 
 <!-- Please fill out the following content for a feature request. -->
