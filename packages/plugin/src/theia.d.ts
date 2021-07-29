@@ -82,6 +82,11 @@ declare module '@theia/plugin' {
         readonly pluginPath: string;
 
         /**
+         * The uri of the directory containing this plug-in.
+         */
+        readonly pluginUri: Uri;
+
+        /**
          * `true` if the plug-in has been activated.
          */
         readonly isActive: boolean;
@@ -1269,6 +1274,27 @@ declare module '@theia/plugin' {
          * @return A new Uri instance.
          */
         static file(path: string): Uri;
+        /**
+         * Create a new uri which path is the result of joining
+         * the path of the base uri with the provided path segments.
+         *
+         * - Note 1: `joinPath` only affects the path component
+         * and all other components (scheme, authority, query, and fragment) are
+         * left as they are.
+         * - Note 2: The base uri must have a path; an error is thrown otherwise.
+         *
+         * The path segments are normalized in the following ways:
+         * - sequences of path separators (`/` or `\`) are replaced with a single separator
+         * - for `file`-uris on windows, the backslash-character (`\`) is considered a path-separator
+         * - the `..`-segment denotes the parent segment, the `.` denotes the current segment
+         * - paths have a root which always remains, for instance on windows drive-letters are roots
+         * so that is true: `joinPath(Uri.file('file:///c:/root'), '../../other').fsPath === 'c:/other'`
+         *
+         * @param base An uri. Must have a path.
+         * @param pathSegments One more more path fragments
+         * @returns A new uri which path is joined with the given fragments
+         */
+        static joinPath(uri: URI, ...pathSegments: string[]): URI;
 
         /**
          * Create an URI from a string. Will throw if the given value is not
@@ -2649,6 +2675,13 @@ declare module '@theia/plugin' {
      * and the editor then silently adjusts the options to select files.
      */
     export interface OpenDialogOptions {
+
+        /**
+         * Dialog title.
+         * This parameter might be ignored, as not all operating systems display a title on open dialogs.
+         */
+        title?: string;
+
         /**
          * The resource the dialog shows when opened.
          */
@@ -2691,6 +2724,13 @@ declare module '@theia/plugin' {
      * Options to configure the behaviour of a file save dialog.
      */
     export interface SaveDialogOptions {
+
+        /**
+         * Dialog title.
+         * This parameter might be ignored, as not all operating systems display a title on save dialogs.
+         */
+        title?: string;
+
         /**
          * The resource the dialog shows when opened.
          */
@@ -2936,6 +2976,71 @@ declare module '@theia/plugin' {
     }
 
     /**
+     * A file decoration represents metadata that can be rendered with a file.
+     */
+    export class FileDecoration {
+
+        /**
+         * A very short string that represents this decoration.
+         */
+        badge?: string;
+
+        /**
+         * A human-readable tooltip for this decoration.
+         */
+        tooltip?: string;
+
+        /**
+         * The color of this decoration.
+         */
+        color?: ThemeColor;
+
+        /**
+         * A flag expressing that this decoration should be
+         * propagated to its parents.
+         */
+        propagate?: boolean;
+
+        /**
+         * Creates a new decoration.
+         *
+         * @param badge A letter that represents the decoration.
+         * @param tooltip The tooltip of the decoration.
+         * @param color The color of the decoration.
+         */
+        constructor(badge?: string, tooltip?: string, color?: ThemeColor);
+    }
+
+    /**
+     * The decoration provider interfaces defines the contract between extensions and
+     * file decorations.
+     */
+    export interface FileDecorationProvider {
+
+        /**
+         * An optional event to signal that decorations for one or many files have changed.
+         *
+         * *Note* that this event should be used to propagate information about children.
+         *
+         * @see [EventEmitter](#EventEmitter)
+         */
+        onDidChangeFileDecorations?: Event<undefined | Uri | Uri[]>;
+
+        /**
+         * Provide decorations for a given uri.
+         *
+         * *Note* that this function is only called when a file gets rendered in the UI.
+         * This means a decoration from a descendent that propagates upwards must be signaled
+         * to the editor via the [onDidChangeFileDecorations](#FileDecorationProvider.onDidChangeFileDecorations)-event.
+         *
+         * @param uri The uri of the file to provide a decoration for.
+         * @param token A cancellation token.
+         * @returns A decoration or a thenable that resolves to such.
+         */
+        provideFileDecoration(uri: Uri, token: CancellationToken): ProviderResult<FileDecoration>;
+    }
+
+    /**
      * A type of mutation that can be applied to an environment variable.
      */
     export enum EnvironmentVariableMutatorType {
@@ -3070,9 +3175,19 @@ declare module '@theia/plugin' {
         globalState: Memento;
 
         /**
+         * A storage utility for secrets.
+         */
+        readonly secrets: SecretStorage;
+
+        /**
          * The absolute file path of the directory containing the extension.
          */
         extensionPath: string;
+
+        /**
+         * The uri of the directory containing the extension.
+         */
+        readonly extensionUri: Uri;
 
         /**
          * Gets the extension's environment variable collection for this workspace, enabling changes
@@ -3093,19 +3208,49 @@ declare module '@theia/plugin' {
          * can store private state. The directory might not exist on disk and creation is
          * up to the extension. However, the parent directory is guaranteed to be existent.
          *
-         * Use [`workspaceState`](#ExtensionContext.workspaceState) or
-         * [`globalState`](#ExtensionContext.globalState) to store key value data.
+         * Use [`workspaceState`](#PluginContext.workspaceState) or
+         * [`globalState`](#PluginContext.globalState) to store key value data.
+         *
+         * @deprecated Use [storageUri](#PluginContext.storageUri) instead.
          */
         storagePath: string | undefined;
+
+        /**
+         * The uri of a workspace specific directory in which the extension
+         * can store private state. The directory might not exist and creation is
+         * up to the extension. However, the parent directory is guaranteed to be existent.
+         * The value is `undefined` when no workspace nor folder has been opened.
+         *
+         * Use [`workspaceState`](#PluginContext.workspaceState) or
+         * [`globalState`](#PluginContext.globalState) to store key value data.
+         *
+         * @see [`workspace.fs`](#FileSystem) for how to read and write files and folders from
+         *  an uri.
+         */
+        readonly storageUri: Uri | undefined;
 
         /**
          * An absolute file path in which the extension can store global state.
          * The directory might not exist on disk and creation is
          * up to the extension. However, the parent directory is guaranteed to be existent.
          *
-         * Use [`globalState`](#ExtensionContext.globalState) to store key value data.
+         * Use [`globalState`](#PluginContext.globalState) to store key value data.
+         *
+         * @deprecated Use [globalStorageUri](#PluginContext.globalStorageUri) instead.
          */
         readonly globalStoragePath: string;
+
+        /**
+         * The uri of a directory in which the extension can store global state.
+         * The directory might not exist on disk and creation is
+         * up to the extension. However, the parent directory is guaranteed to be existent.
+         *
+         * Use [`globalState`](#PluginContext.globalState) to store key value data.
+         *
+         * @see [`workspace.fs`](#FileSystem) for how to read and write files and folders from
+         *  an uri.
+         */
+        readonly globalStorageUri: Uri;
 
         /**
          * An absolute file path of a directory in which the extension can create log files.
@@ -3146,6 +3291,48 @@ declare module '@theia/plugin' {
          * @param value A value. MUST not contain cyclic references.
          */
         update(key: string, value: any): PromiseLike<void>;
+    }
+
+    /**
+     * The event data that is fired when a secret is added or removed.
+     */
+    export interface SecretStorageChangeEvent {
+        /**
+         * The key of the secret that has changed.
+         */
+        readonly key: string;
+    }
+
+    /**
+     * Represents a storage utility for secrets, information that is
+     * sensitive.
+     */
+    export interface SecretStorage {
+        /**
+         * Retrieve a secret that was stored with key. Returns undefined if there
+         * is no password matching that key.
+         * @param key The key the secret was stored under.
+         * @returns The stored value or `undefined`.
+         */
+        get(key: string): Thenable<string | undefined>;
+
+        /**
+         * Store a secret under a given key.
+         * @param key The key to store the secret under.
+         * @param value The secret.
+         */
+        store(key: string, value: string): Thenable<void>;
+
+        /**
+         * Remove a secret from storage.
+         * @param key The key the secret was stored under.
+         */
+        delete(key: string): Thenable<void>;
+
+        /**
+         * Fires when a secret is stored or deleted.
+         */
+        onDidChange: Event<SecretStorageChangeEvent>;
     }
 
     /**
@@ -4382,6 +4569,14 @@ declare module '@theia/plugin' {
          * @return Disposable that unregisters the provider.
          */
         export function registerTerminalLinkProvider(provider: TerminalLinkProvider): void;
+
+        /**
+         * Register a file decoration provider.
+         *
+         * @param provider A [FileDecorationProvider](#FileDecorationProvider).
+         * @return A [disposable](#Disposable) that unregisters the provider.
+         */
+        export function registerFileDecorationProvider(provider: FileDecorationProvider): Disposable;
 
         /**
          * The currently active color theme as configured in the settings. The active
@@ -9714,6 +9909,24 @@ declare module '@theia/plugin' {
         [name: string]: any;
     }
 
+    /**
+     * Class used to execute an extension callback as a task.
+     */
+    export class CustomExecution {
+        /**
+         * Constructs a CustomExecution task object. The callback will be executed when the task is run, at which point the
+         * extension should return the Pseudoterminal it will "run in". The task should wait to do further execution until
+         * [Pseudoterminal.open](#Pseudoterminal.open) is called. Task cancellation should be handled using
+         * [Pseudoterminal.close](#Pseudoterminal.close). When the task is complete fire
+         * [Pseudoterminal.onDidClose](#Pseudoterminal.onDidClose).
+         * @param callback The callback that will be called when the task is started by a user. Any ${} style variables that
+         * were in the task definition will be resolved and passed into the callback as `resolvedDefinition`.
+         */
+        constructor(callback: (resolvedDefinition: TaskDefinition) => Thenable<Pseudoterminal>);
+
+        readonly callback;
+    }
+
     export enum TaskScope {
         /** The task is a global task. Global tasks are currently not supported. */
         Global = 1,
@@ -9806,7 +10019,7 @@ declare module '@theia/plugin' {
          * @param scope Specifies the task's scope.
          * @param name The task's name. Is presented in the user interface.
          * @param source The task's source (e.g. 'gulp', 'npm', ...). Is presented in the user interface.
-         * @param execution The process or shell execution.
+         * @param execution The process, shell or custom execution.
          * @param problemMatchers the names of problem matchers to use, like '$tsc'
          *  or '$eslint'. Problem matchers can be contributed by an extension using
          *  the `problemMatchers` extension point.
@@ -9816,7 +10029,7 @@ declare module '@theia/plugin' {
             scope: WorkspaceFolder | TaskScope.Global | TaskScope.Workspace,
             name: string,
             source?: string,
-            execution?: ProcessExecution | ShellExecution,
+            execution?: ProcessExecution | ShellExecution | CustomExecution,
             problemMatchers?: string | string[]);
 
         /**
@@ -9827,7 +10040,7 @@ declare module '@theia/plugin' {
          * @param definition The task definition as defined in the taskDefinitions extension point.
          * @param name The task's name. Is presented in the user interface.
          * @param source The task's source (e.g. 'gulp', 'npm', ...). Is presented in the user interface.
-         * @param execution The process or shell execution.
+         * @param execution The process, shell or custom execution.
          * @param problemMatchers the names of problem matchers to use, like '$tsc'
          *  or '$eslint'. Problem matchers can be contributed by an extension using
          *  the `problemMatchers` extension point.
@@ -9836,7 +10049,7 @@ declare module '@theia/plugin' {
             taskDefinition: TaskDefinition,
             name: string,
             source: string,
-            execution?: ProcessExecution | ShellExecution,
+            execution?: ProcessExecution | ShellExecution | CustomExecution,
             problemMatchers?: string | string[]);
 
         /** The task's name */
@@ -9849,7 +10062,7 @@ declare module '@theia/plugin' {
         scope?: TaskScope.Global | TaskScope.Workspace | WorkspaceFolder;
 
         /** The task's execution engine */
-        execution?: ProcessExecution | ShellExecution;
+        execution?: ProcessExecution | ShellExecution | CustomExecution;
 
         /** Whether the task is a background task or not. */
         isBackground?: boolean;

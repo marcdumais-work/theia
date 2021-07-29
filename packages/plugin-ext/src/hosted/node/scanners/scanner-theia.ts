@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { inject, injectable } from 'inversify';
+import { inject, injectable } from '@theia/core/shared/inversify';
 import {
     AutoClosingPair,
     AutoClosingPairConditional,
@@ -492,7 +492,8 @@ export class TheiaPluginScanner implements PluginScanner {
             when: rawKeybinding.when,
             mac: rawKeybinding.mac,
             linux: rawKeybinding.linux,
-            win: rawKeybinding.win
+            win: rawKeybinding.win,
+            args: rawKeybinding.args
         };
     }
 

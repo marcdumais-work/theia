@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { injectable, inject } from 'inversify';
+import { injectable, inject } from '@theia/core/shared/inversify';
 import { PreferenceScope, LabelProvider } from '@theia/core/lib/browser';
 import { FileStat } from '@theia/filesystem/lib/common/files';
 import { CommandRegistry, MenuModelRegistry, Command } from '@theia/core/lib/common';
@@ -32,7 +32,7 @@ export class PreferenceScopeCommandManager {
 
     createFolderWorkspacesMenu(
         folderWorkspaces: FileStat[],
-        currentFolderURI: string,
+        currentFolderURI?: string,
     ): void {
         this.foldersAsCommands.forEach(folderCommand => {
             this.menuModelRegistry.unregisterMenuAction(folderCommand, FOLDER_SCOPE_MENU_PATH);
@@ -56,7 +56,7 @@ export class PreferenceScopeCommandManager {
                 isVisible: (callback, check) => check === 'from-tabbar',
                 isEnabled: (callback, check) => check === 'from-tabbar',
                 execute: (callback: (scopeDetails: Preference.SelectedScopeDetails) => void) => {
-                    callback({ scope: PreferenceScope.Folder.toString(), uri: folderWorkspace.resource.toString(), activeScopeIsFolder: 'true' });
+                    callback({ scope: PreferenceScope.Folder, uri: folderWorkspace.resource.toString(), activeScopeIsFolder: true });
                 }
             });
 

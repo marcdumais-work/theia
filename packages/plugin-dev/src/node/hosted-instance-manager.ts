@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { inject, injectable, named } from 'inversify';
+import { inject, injectable, named } from '@theia/core/shared/inversify';
 import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as net from 'net';
@@ -92,7 +92,6 @@ const PROCESS_OPTIONS = {
     cwd: process.cwd(),
     env: { ...process.env }
 };
-delete PROCESS_OPTIONS.env.ELECTRON_RUN_AS_NODE;
 
 @injectable()
 export abstract class AbstractHostedInstanceManager implements HostedInstanceManager {

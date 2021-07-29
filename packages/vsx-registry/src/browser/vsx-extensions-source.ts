@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { injectable, inject, postConstruct } from 'inversify';
+import { injectable, inject, postConstruct } from '@theia/core/shared/inversify';
 import { TreeSource, TreeElement } from '@theia/core/lib/browser/source-tree';
 import { VSXExtensionsModel } from './vsx-extensions-model';
 
@@ -23,6 +23,7 @@ export class VSXExtensionsSourceOptions {
     static INSTALLED = 'installed';
     static BUILT_IN = 'builtin';
     static SEARCH_RESULT = 'searchResult';
+    static RECOMMENDED = 'recommended';
     readonly id: string;
 }
 
@@ -47,6 +48,11 @@ export class VSXExtensionsSource extends TreeSource {
             if (!extension) {
                 continue;
             }
+            if (this.options.id === VSXExtensionsSourceOptions.RECOMMENDED) {
+                if (this.model.isInstalled(id)) {
+                    continue;
+                }
+            }
             if (this.options.id === VSXExtensionsSourceOptions.BUILT_IN) {
                 if (extension.builtin) {
                     yield extension;
@@ -60,6 +66,9 @@ export class VSXExtensionsSource extends TreeSource {
     protected doGetElements(): IterableIterator<string> {
         if (this.options.id === VSXExtensionsSourceOptions.SEARCH_RESULT) {
             return this.model.searchResult;
+        }
+        if (this.options.id === VSXExtensionsSourceOptions.RECOMMENDED) {
+            return this.model.recommended;
         }
         return this.model.installed;
     }

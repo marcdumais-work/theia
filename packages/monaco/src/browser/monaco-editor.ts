@@ -14,8 +14,8 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { injectable, inject, unmanaged } from 'inversify';
-import { ElementExt } from '@phosphor/domutils';
+import { injectable, inject, unmanaged } from '@theia/core/shared/inversify';
+import { ElementExt } from '@theia/core/shared/@phosphor/domutils';
 import URI from '@theia/core/lib/common/uri';
 import { ContextKeyService } from '@theia/core/lib/browser/context-key-service';
 import { DisposableCollection, Disposable, Emitter, Event } from '@theia/core/lib/common';
@@ -39,7 +39,7 @@ import {
 import { MonacoEditorModel } from './monaco-editor-model';
 import { MonacoToProtocolConverter } from './monaco-to-protocol-converter';
 import { ProtocolToMonacoConverter } from './protocol-to-monaco-converter';
-import { TextEdit } from 'vscode-languageserver-types';
+import { TextEdit } from '@theia/core/shared/vscode-languageserver-types';
 import { UTF8 } from '@theia/core/lib/common/encodings';
 
 import IStandaloneEditorConstructionOptions = monaco.editor.IStandaloneEditorConstructionOptions;
@@ -84,6 +84,9 @@ export class MonacoEditor extends MonacoEditorServices implements TextEditor {
     readonly onLanguageChanged = this.onLanguageChangedEmitter.event;
     protected readonly onScrollChangedEmitter = new Emitter<void>();
     readonly onEncodingChanged = this.document.onDidChangeEncoding;
+    // eslint-disable-next-line no-null/no-null
+    protected readonly onResizeEmitter = new Emitter<Dimension | null>();
+    readonly onDidResize = this.onResizeEmitter.event;
 
     readonly documents = new Set<MonacoEditorModel>();
 
@@ -340,10 +343,13 @@ export class MonacoEditor extends MonacoEditorServices implements TextEditor {
 
     resizeToFit(): void {
         this.autoresize();
+        // eslint-disable-next-line no-null/no-null
+        this.onResizeEmitter.fire(null);
     }
 
     setSize(dimension: Dimension): void {
         this.resize(dimension);
+        this.onResizeEmitter.fire(dimension);
     }
 
     protected autoresize(): void {

@@ -13,7 +13,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
-import { inject, injectable } from 'inversify';
+import { inject, injectable } from '@theia/core/shared/inversify';
 import URI from '@theia/core/lib/common/uri';
 import {
     Command,
@@ -47,6 +47,8 @@ import { GitPreferences } from './git-preferences';
 import { ColorContribution } from '@theia/core/lib/browser/color-application-contribution';
 import { ColorRegistry } from '@theia/core/lib/browser/color-registry';
 import { ScmInputIssueType } from '@theia/scm/lib/browser/scm-input';
+import { DecorationsService } from '@theia/core/lib/browser/decorations-service';
+import { GitDecorationProvider } from './git-decoration-provider';
 
 export namespace GIT_COMMANDS {
     export const CLONE = {
@@ -61,6 +63,10 @@ export namespace GIT_COMMANDS {
         id: 'git.pull.default',
         label: 'Git: Pull'
     };
+    export const PULL_DEFAULT_FAVORITE = {
+        id: PULL_DEFAULT.id + '.favorite',
+        label: PULL_DEFAULT.label
+    };
     export const PULL = {
         id: 'git.pull',
         label: 'Git: Pull from...'
@@ -68,6 +74,10 @@ export namespace GIT_COMMANDS {
     export const PUSH_DEFAULT = {
         id: 'git.push.default',
         label: 'Git: Push'
+    };
+    export const PUSH_DEFAULT_FAVORITE = {
+        id: PUSH_DEFAULT.id + '.favorite',
+        label: PUSH_DEFAULT.label
     };
     export const PUSH = {
         id: 'git.push',
@@ -204,7 +214,32 @@ export namespace GIT_COMMANDS {
         category: 'Git'
     };
 }
+export namespace GIT_MENUS {
+    // Top level Groups
+    export const FAV_GROUP = '2_favorites';
+    export const COMMANDS_GROUP = '3_commands';
 
+    export const SUBMENU_COMMIT = {
+        group: COMMANDS_GROUP,
+        label: 'Commit',
+        menuGroups: ['1_commit'],
+    };
+    export const SUBMENU_CHANGES = {
+        group: COMMANDS_GROUP,
+        label: 'Changes',
+        menuGroups: ['1_changes']
+    };
+    export const SUBMENU_PULL_PUSH = {
+        group: COMMANDS_GROUP,
+        label: 'Pull, Push',
+        menuGroups: ['2_pull', '3_push', '4_fetch']
+    };
+    export const SUBMENU_STASH = {
+        group: COMMANDS_GROUP,
+        label: 'Stash',
+        menuGroups: ['1_stash']
+    };
+}
 @injectable()
 export class GitContribution implements CommandContribution, MenuContribution, TabBarToolbarContribution, ColorContribution {
 
@@ -224,11 +259,14 @@ export class GitContribution implements CommandContribution, MenuContribution, T
     @inject(CommandRegistry) protected readonly commands: CommandRegistry;
     @inject(ProgressService) protected readonly progressService: ProgressService;
     @inject(GitPreferences) protected readonly gitPreferences: GitPreferences;
+    @inject(DecorationsService) protected readonly decorationsService: DecorationsService;
+    @inject(GitDecorationProvider) protected readonly gitDecorationProvider: GitDecorationProvider;
 
     onStart(): void {
         this.updateStatusBar();
         this.repositoryTracker.onGitEvent(() => this.updateStatusBar());
         this.syncService.onDidChange(() => this.updateStatusBar());
+        this.decorationsService.registerDecorationsProvider(this.gitDecorationProvider);
     }
 
     registerMenus(menus: MenuModelRegistry): void {
@@ -339,12 +377,20 @@ export class GitContribution implements CommandContribution, MenuContribution, T
             execute: () => this.withProgress(() => this.quickOpenService.performDefaultGitAction(GitAction.PULL)),
             isEnabled: () => !!this.repositoryTracker.selectedRepository
         });
+        registry.registerCommand(GIT_COMMANDS.PULL_DEFAULT_FAVORITE, {
+            execute: () => registry.executeCommand(GIT_COMMANDS.PULL_DEFAULT.id),
+            isEnabled: () => !!this.repositoryTracker.selectedRepository
+        });
         registry.registerCommand(GIT_COMMANDS.PULL, {
             execute: () => this.withProgress(() => this.quickOpenService.pull()),
             isEnabled: () => !!this.repositoryTracker.selectedRepository
         });
         registry.registerCommand(GIT_COMMANDS.PUSH_DEFAULT, {
             execute: () => this.withProgress(() => this.quickOpenService.performDefaultGitAction(GitAction.PUSH)),
+            isEnabled: () => !!this.repositoryTracker.selectedRepository
+        });
+        registry.registerCommand(GIT_COMMANDS.PUSH_DEFAULT_FAVORITE, {
+            execute: () => registry.executeCommand(GIT_COMMANDS.PUSH_DEFAULT.id),
             isEnabled: () => !!this.repositoryTracker.selectedRepository
         });
         registry.registerCommand(GIT_COMMANDS.PUSH, {
@@ -449,7 +495,7 @@ export class GitContribution implements CommandContribution, MenuContribution, T
                 return provider && this.withProgress(() => provider.discard(resources));
             },
             isEnabled: (...arg: ScmResource[]) => !!this.repositoryProvider.selectedScmProvider
-                    && arg.some(r => r.sourceUri)
+                && arg.some(r => r.sourceUri)
         });
         registry.registerCommand(GIT_COMMANDS.OPEN_CHANGED_FILE, {
             execute: (...arg: ScmResource[]) => {
@@ -568,56 +614,97 @@ export class GitContribution implements CommandContribution, MenuContribution, T
             command: GIT_COMMANDS.COMMIT_ADD_SIGN_OFF.id,
             tooltip: GIT_COMMANDS.COMMIT_ADD_SIGN_OFF.label
         });
+
+        // Favorites menu group
+        [GIT_COMMANDS.PULL_DEFAULT_FAVORITE, GIT_COMMANDS.PUSH_DEFAULT_FAVORITE].forEach((command, index) =>
+            registerItem({
+                id: command.id + '_fav',
+                command: command.id,
+                tooltip: command.label.slice('Git: '.length),
+                group: GIT_MENUS.FAV_GROUP,
+                priority: 100 - index
+            })
+        );
+
         registerItem({
             id: GIT_COMMANDS.COMMIT_AMEND.id,
             command: GIT_COMMANDS.COMMIT_AMEND.id,
             tooltip: 'Commit (Amend)',
-            group: '1_input'
+            group: this.asSubMenuItemOf(GIT_MENUS.SUBMENU_COMMIT)
         });
         registerItem({
             id: GIT_COMMANDS.COMMIT_SIGN_OFF.id,
             command: GIT_COMMANDS.COMMIT_SIGN_OFF.id,
             tooltip: 'Commit (Signed Off)',
-            group: '1_input'
+            group: this.asSubMenuItemOf(GIT_MENUS.SUBMENU_COMMIT)
         });
-        [GIT_COMMANDS.FETCH, GIT_COMMANDS.PULL_DEFAULT, GIT_COMMANDS.PULL, GIT_COMMANDS.PUSH_DEFAULT, GIT_COMMANDS.PUSH, GIT_COMMANDS.MERGE].forEach(command =>
+        [GIT_COMMANDS.PULL_DEFAULT, GIT_COMMANDS.PULL].forEach(command =>
             registerItem({
                 id: command.id,
                 command: command.id,
                 tooltip: command.label.slice('Git: '.length),
-                group: '2_other'
+                group: this.asSubMenuItemOf(GIT_MENUS.SUBMENU_PULL_PUSH)
             })
         );
+        [GIT_COMMANDS.PUSH_DEFAULT, GIT_COMMANDS.PUSH].forEach(command =>
+            registerItem({
+                id: command.id,
+                command: command.id,
+                tooltip: command.label.slice('Git: '.length),
+                group: this.asSubMenuItemOf(GIT_MENUS.SUBMENU_PULL_PUSH, 1)
+            })
+        );
+        registerItem({
+            id: GIT_COMMANDS.FETCH.id,
+            command: GIT_COMMANDS.FETCH.id,
+            tooltip: GIT_COMMANDS.FETCH.label.slice('Git: '.length),
+            group: this.asSubMenuItemOf(GIT_MENUS.SUBMENU_PULL_PUSH, 2)
+        });
+
         [
             GIT_COMMANDS.STASH, GIT_COMMANDS.APPLY_STASH,
             GIT_COMMANDS.APPLY_LATEST_STASH, GIT_COMMANDS.POP_STASH,
             GIT_COMMANDS.POP_LATEST_STASH, GIT_COMMANDS.DROP_STASH
-        ].forEach(command =>
+        ].forEach((command, index) =>
             registerItem({
                 id: command.id,
                 command: command.id,
                 tooltip: command.label,
-                group: '3_other'
+                group: this.asSubMenuItemOf(GIT_MENUS.SUBMENU_STASH),
+                priority: 100 - index
             })
         );
         registerItem({
             id: GIT_COMMANDS.STAGE_ALL.id,
             command: GIT_COMMANDS.STAGE_ALL.id,
             tooltip: 'Stage All Changes',
-            group: '3_batch'
+            group: this.asSubMenuItemOf(GIT_MENUS.SUBMENU_CHANGES),
+            priority: 30
         });
         registerItem({
             id: GIT_COMMANDS.UNSTAGE_ALL.id,
             command: GIT_COMMANDS.UNSTAGE_ALL.id,
             tooltip: 'Unstage All Changes',
-            group: '3_batch'
+            group: this.asSubMenuItemOf(GIT_MENUS.SUBMENU_CHANGES),
+            priority: 20
         });
         registerItem({
             id: GIT_COMMANDS.DISCARD_ALL.id,
             command: GIT_COMMANDS.DISCARD_ALL.id,
             tooltip: 'Discard All Changes',
-            group: '3_batch'
+            group: this.asSubMenuItemOf(GIT_MENUS.SUBMENU_CHANGES),
+            priority: 10
         });
+        registerItem({
+            id: GIT_COMMANDS.MERGE.id,
+            command: GIT_COMMANDS.MERGE.id,
+            tooltip: GIT_COMMANDS.MERGE.label.slice('Git: '.length),
+            group: GIT_MENUS.COMMANDS_GROUP
+        });
+    }
+
+    protected asSubMenuItemOf(submenu: { group: string; label: string; menuGroups: string[]; }, groupIdx: number = 0): string {
+        return submenu.group + '/' + submenu.label + '/' + submenu.menuGroups[groupIdx];
     }
 
     protected hasConflicts(changes: GitFileChange[]): boolean {

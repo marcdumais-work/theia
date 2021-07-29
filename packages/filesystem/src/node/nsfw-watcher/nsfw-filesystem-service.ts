@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import * as nsfw from 'nsfw';
+import * as nsfw from '@theia/core/shared/nsfw';
 import { join } from 'path';
 import { promises as fsp } from 'fs';
 import { IMinimatch, Minimatch } from 'minimatch';
@@ -242,7 +242,7 @@ export class NsfwWatcher {
         });
     }
 
-    protected handleNsfwEvents(events: nsfw.ChangeEvent[]): void {
+    protected handleNsfwEvents(events: nsfw.FileChangeEvent[]): void {
         // Only process events if someone is listening.
         if (this.isInUse()) {
             // This callback is async, but nsfw won't wait for it to finish before firing the next one.

@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import * as electron from 'electron';
+import * as electron from '../../../shared/electron';
 import { inject, injectable } from 'inversify';
 import {
     Command, CommandContribution, CommandRegistry,
@@ -50,6 +50,11 @@ export namespace ElectronCommands {
     export const CLOSE_WINDOW: Command = {
         id: 'close.window',
         label: 'Close Window'
+    };
+    export const TOGGLE_FULL_SCREEN: Command = {
+        id: 'workbench.action.toggleFullScreen',
+        category: 'View',
+        label: 'Toggle Full Screen'
     };
 }
 
@@ -182,6 +187,11 @@ export class ElectronMenuContribution implements FrontendApplicationContribution
         registry.registerCommand(ElectronCommands.RESET_ZOOM, {
             execute: () => this.preferenceService.set('window.zoomLevel', ZoomLevel.DEFAULT, PreferenceScope.User)
         });
+        registry.registerCommand(ElectronCommands.TOGGLE_FULL_SCREEN, {
+            isEnabled: () => currentWindow.isFullScreenable(),
+            isVisible: () => currentWindow.isFullScreenable(),
+            execute: () => currentWindow.setFullScreen(!currentWindow.isFullScreen())
+        });
     }
 
     registerKeybindings(registry: KeybindingRegistry): void {
@@ -209,6 +219,10 @@ export class ElectronMenuContribution implements FrontendApplicationContribution
             {
                 command: ElectronCommands.CLOSE_WINDOW.id,
                 keybinding: (isOSX ? 'cmd+shift+w' : (isWindows ? 'ctrl+w' : /* Linux */ 'ctrl+q'))
+            },
+            {
+                command: ElectronCommands.TOGGLE_FULL_SCREEN.id,
+                keybinding: isOSX ? 'ctrl+ctrlcmd+f' : 'f11'
             }
         );
     }

@@ -21,8 +21,8 @@
 // copied and modified from https://github.com/microsoft/vscode/blob/ba40bd16433d5a817bfae15f3b4350e18f144af4/src/vs/workbench/contrib/webview/browser/webviewElement.ts#
 
 import * as mime from 'mime';
-import { JSONExt } from '@phosphor/coreutils/lib/json';
-import { injectable, inject, postConstruct } from 'inversify';
+import { JSONExt } from '@theia/core/shared/@phosphor/coreutils';
+import { injectable, inject, postConstruct } from '@theia/core/shared/inversify';
 import { WebviewPanelOptions, WebviewPortMapping } from '@theia/plugin';
 import { BaseWidget, Message } from '@theia/core/lib/browser/widgets/widget';
 import { Disposable, DisposableCollection } from '@theia/core/lib/common/disposable';
@@ -383,12 +383,16 @@ export class WebviewWidget extends BaseWidget implements StatefulWidget {
             const iconClass = `webview-${this.identifier.id}-file-icon`;
             this.toDisposeOnIcon.push(this.sharedStyle.insertRule(
                 `.theia-webview-icon.${iconClass}::before`,
-                theme => `background-image: url(${theme.type === 'light' ? lightIconUrl : darkIconUrl});`
+                theme => `background-image: url(${this.toEndpoint(theme.type === 'light' ? lightIconUrl : darkIconUrl)});`
             ));
             this.title.iconClass = `theia-webview-icon ${iconClass}`;
         } else {
             this.title.iconClass = '';
         }
+    }
+
+    protected toEndpoint(pathname: string): string {
+        return new Endpoint({ path: pathname }).getRestUrl().toString();
     }
 
     setHTML(value: string): void {

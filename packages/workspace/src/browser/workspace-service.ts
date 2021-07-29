@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { injectable, inject, postConstruct } from 'inversify';
+import { injectable, inject, postConstruct } from '@theia/core/shared/inversify';
 import URI from '@theia/core/lib/common/uri';
 import { WorkspaceServer, THEIA_EXT, VSCODE_EXT, getTemporaryWorkspaceFileUri } from '../common';
 import { WindowService } from '@theia/core/lib/browser/window/window-service';
@@ -40,10 +40,10 @@ import { IJSONSchema } from '@theia/core/lib/common/json-schema';
 @injectable()
 export class WorkspaceService implements FrontendApplicationContribution {
 
-    private _workspace: FileStat | undefined;
+    protected _workspace: FileStat | undefined;
 
-    private _roots: FileStat[] = [];
-    private deferredRoots = new Deferred<FileStat[]>();
+    protected _roots: FileStat[] = [];
+    protected deferredRoots = new Deferred<FileStat[]>();
 
     @inject(FileService)
     protected readonly fileService: FileService;
@@ -83,6 +83,11 @@ export class WorkspaceService implements FrontendApplicationContribution {
 
     protected applicationName: string;
 
+    protected _ready = new Deferred<void>();
+    get ready(): Promise<void> {
+        return this._ready.promise;
+    }
+
     @postConstruct()
     protected async init(): Promise<void> {
         this.applicationName = FrontendApplicationConfigProvider.get().applicationName;
@@ -105,6 +110,7 @@ export class WorkspaceService implements FrontendApplicationContribution {
                 this.refreshRootWatchers();
             }
         });
+        this._ready.resolve();
     }
 
     /**
@@ -193,6 +199,7 @@ export class WorkspaceService implements FrontendApplicationContribution {
             const uri = this._workspace.resource;
             if (this._workspace.isFile) {
                 this.toDisposeOnWorkspace.push(this.fileService.watch(uri));
+                this.onWorkspaceLocationChangedEmitter.fire(this._workspace);
             }
             this.setURLFragment(uri.path.toString());
         } else {
@@ -416,7 +423,7 @@ export class WorkspaceService implements FrontendApplicationContribution {
         return getTemporaryWorkspaceFileUri(this.envVariableServer);
     }
 
-    private async writeWorkspaceFile(workspaceFile: FileStat | undefined, workspaceData: WorkspaceData): Promise<FileStat | undefined> {
+    protected async writeWorkspaceFile(workspaceFile: FileStat | undefined, workspaceData: WorkspaceData): Promise<FileStat | undefined> {
         if (workspaceFile) {
             const data = JSON.stringify(WorkspaceData.transformToRelative(workspaceData, workspaceFile));
             const edits = jsoncparser.format(data, undefined, { tabSize: 3, insertSpaces: true, eol: '' });

@@ -15,11 +15,11 @@
  ********************************************************************************/
 
 import { Widget, Message, BaseWidget, Key, StatefulWidget, MessageLoop, KeyCode } from '@theia/core/lib/browser';
-import { inject, injectable, postConstruct } from 'inversify';
+import { inject, injectable, postConstruct } from '@theia/core/shared/inversify';
 import { SearchInWorkspaceResultTreeWidget } from './search-in-workspace-result-tree-widget';
 import { SearchInWorkspaceOptions } from '../common/search-in-workspace-interface';
-import * as React from 'react';
-import * as ReactDOM from 'react-dom';
+import * as React from '@theia/core/shared/react';
+import * as ReactDOM from '@theia/core/shared/react-dom';
 import { Event, Emitter, Disposable } from '@theia/core/lib/common';
 import { WorkspaceService } from '@theia/workspace/lib/browser';
 import { SearchInWorkspaceContextKeyService } from './search-in-workspace-context-key-service';
@@ -150,6 +150,12 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
             this.focusInputField();
         }));
 
+        this.toDispose.push(this.searchInWorkspacePreferences.onPreferenceChanged(e => {
+            if (e.preferenceName === 'search.smartCase') {
+                this.performSearch();
+            }
+        }));
+
         this.toDispose.push(this.resultTreeWidget);
 
         this.toDispose.push(this.progressBarFactory({ container: this.node, insertMode: 'prepend', locationId: 'search' }));
@@ -219,7 +225,7 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
     }
 
     refresh(): void {
-        this.resultTreeWidget.search(this.searchTerm, this.searchInWorkspaceOptions);
+        this.performSearch();
         this.update();
     }
 
@@ -251,7 +257,7 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
             (include as HTMLInputElement).value = '';
             (exclude as HTMLInputElement).value = '';
         }
-        this.resultTreeWidget.search(this.searchTerm, this.searchInWorkspaceOptions);
+        this.performSearch();
         this.update();
     }
 
@@ -389,7 +395,7 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
     protected readonly onKeyDownSearch = (e: React.KeyboardEvent) => {
         if (Key.ENTER.keyCode === KeyCode.createKeyCode(e.nativeEvent).key?.keyCode) {
             this.searchTerm = (e.target as HTMLInputElement).value;
-            this.resultTreeWidget.search(this.searchTerm, (this.searchInWorkspaceOptions || {}));
+            this.performSearch();
         }
     };
 
@@ -402,9 +408,31 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
                 return;
             } else {
                 this.searchTerm = searchValue;
-                this.resultTreeWidget.search(this.searchTerm, (this.searchInWorkspaceOptions || {}));
+                this.performSearch();
             }
         }
+    }
+
+    protected performSearch(): void {
+        const searchOptions: SearchInWorkspaceOptions = {
+            ...this.searchInWorkspaceOptions,
+            matchCase: this.shouldMatchCase()
+        };
+        this.resultTreeWidget.search(this.searchTerm, searchOptions);
+    }
+
+    /**
+     * Determine if search should be case sensitive.
+     */
+    protected shouldMatchCase(): boolean {
+        if (this.matchCaseState.enabled) {
+            return this.matchCaseState.enabled;
+        }
+        // search.smartCase makes siw search case-sensitive if the search term contains uppercase letter(s).
+        return (
+            !!this.searchInWorkspacePreferences['search.smartCase']
+            && this.searchTerm !== this.searchTerm.toLowerCase()
+        );
     }
 
     protected renderSearchField(): React.ReactNode {
@@ -443,7 +471,7 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
         if (e.target) {
             this.replaceTerm = (e.target as HTMLInputElement).value;
             this.resultTreeWidget.replaceTerm = this.replaceTerm;
-            this.resultTreeWidget.search(this.searchTerm, (this.searchInWorkspaceOptions || {}));
+            this.performSearch();
             this.update();
         }
     }
@@ -505,7 +533,7 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
         option.enabled = !option.enabled;
         this.updateSearchOptions();
         this.searchFieldContainerIsFocused = true;
-        this.resultTreeWidget.search(this.searchTerm, this.searchInWorkspaceOptions);
+        this.performSearch();
         this.update();
     }
 
@@ -573,7 +601,7 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
                             shouldSearch = true;
                         }
                         if (shouldSearch) {
-                            this.resultTreeWidget.search(this.searchTerm, this.searchInWorkspaceOptions);
+                            this.performSearch();
                         }
                     }
                 }}

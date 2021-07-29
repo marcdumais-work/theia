@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { ContainerModule, interfaces } from 'inversify';
+import { ContainerModule, interfaces } from '@theia/core/shared/inversify';
 import { OutlineViewService } from './outline-view-service';
 import { OutlineViewContribution } from './outline-view-contribution';
 import { WidgetFactory } from '@theia/core/lib/browser/widget-manager';
@@ -34,7 +34,7 @@ import { OutlineViewWidgetFactory, OutlineViewWidget } from './outline-view-widg
 import '../../src/browser/styles/index.css';
 import { bindContributionProvider } from '@theia/core/lib/common/contribution-provider';
 import { OutlineDecoratorService, OutlineTreeDecorator } from './outline-decorator-service';
-import { OutlineViewTreeModel } from './outline-view-tree';
+import { OutlineViewTreeModel } from './outline-view-tree-model';
 
 export default new ContainerModule(bind => {
     bind(OutlineViewWidgetFactory).toFactory(ctx =>
@@ -61,7 +61,7 @@ export default new ContainerModule(bind => {
 function createOutlineViewWidget(parent: interfaces.Container): OutlineViewWidget {
     const child = createTreeContainer(parent);
 
-    child.rebind(TreeProps).toConstantValue({ ...defaultTreeProps, search: true });
+    child.rebind(TreeProps).toConstantValue({ ...defaultTreeProps, expandOnlyOnExpansionToggleClick: true, search: true });
 
     child.unbind(TreeWidget);
     child.bind(OutlineViewWidget).toSelf();

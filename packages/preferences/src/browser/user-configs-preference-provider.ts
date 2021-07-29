@@ -16,7 +16,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { inject, injectable, postConstruct } from 'inversify';
+import { inject, injectable, postConstruct } from '@theia/core/shared/inversify';
 import URI from '@theia/core/lib/common/uri';
 import { PreferenceProvider, PreferenceResolveResult } from '@theia/core/lib/browser/preferences/preference-provider';
 import { PreferenceConfigurations } from '@theia/core/lib/browser/preferences/preference-configurations';
@@ -92,14 +92,24 @@ export class UserConfigsPreferenceProvider extends PreferenceProvider {
 
     async setPreference(preferenceName: string, value: any, resourceUri?: string): Promise<boolean> {
         const sectionName = preferenceName.split('.', 1)[0];
-        const configName = this.configurations.isSectionName(sectionName) ? sectionName : this.configurations.getConfigName();
+        const defaultConfigName = this.configurations.getConfigName();
+        const configName = this.configurations.isSectionName(sectionName) ? sectionName : defaultConfigName;
 
-        const providers = this.providers.values();
-
-        for (const provider of providers) {
-            if (this.configurations.getName(provider.getConfigUri()) === configName) {
-                return provider.setPreference(preferenceName, value, resourceUri);
+        const setWithConfigName = async (name: string): Promise<boolean> => {
+            for (const provider of this.providers.values()) {
+                if (this.configurations.getName(provider.getConfigUri()) === name) {
+                    if (await provider.setPreference(preferenceName, value, resourceUri)) {
+                        return true;
+                    }
+                }
             }
+            return false;
+        };
+
+        if (await setWithConfigName(configName)) { // Try in the section we believe it belongs in.
+            return true;
+        } else if (configName !== defaultConfigName) { // Fall back to `settings.json` if that fails.
+            return setWithConfigName(defaultConfigName);
         }
         return false;
     }

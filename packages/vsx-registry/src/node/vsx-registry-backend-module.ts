@@ -14,21 +14,21 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { ContainerModule } from 'inversify';
+import { ContainerModule } from '@theia/core/shared/inversify';
 import { VSXExtensionResolver } from './vsx-extension-resolver';
 import { PluginDeployerResolver } from '@theia/plugin-ext/lib/common/plugin-protocol';
-import { VSXRegistryAPI } from '../common/vsx-registry-api';
-import { VSXEnvironment } from '../common/vsx-environment';
-import { VSXApiVersionProviderImpl } from './vsx-api-version-provider-backend-impl';
-import { VSXApiVersionProvider } from '../common/vsx-api-version-provider';
+import { VSCODE_DEFAULT_API_VERSION, VSX_REGISTRY_URL_DEFAULT } from '@theia/plugin-ext-vscode/lib/common/plugin-vscode-types';
+import { OVSXClient } from '@theia/ovsx-client/lib/ovsx-client';
 
 export default new ContainerModule(bind => {
-    bind(VSXEnvironment).toSelf().inRequestScope();
-    bind(VSXRegistryAPI).toSelf().inSingletonScope();
-
+    bind(OVSXClient).toConstantValue(new OVSXClient({
+        apiVersion: process.env['VSCODE_API_VERSION'] || VSCODE_DEFAULT_API_VERSION,
+        apiUrl: resolveRegistryUrl()
+    }));
     bind(VSXExtensionResolver).toSelf().inSingletonScope();
     bind(PluginDeployerResolver).toService(VSXExtensionResolver);
-
-    bind(VSXApiVersionProviderImpl).toSelf().inSingletonScope();
-    bind(VSXApiVersionProvider).toService(VSXApiVersionProviderImpl);
 });
+
+function resolveRegistryUrl(): string {
+   return process.env['VSX_REGISTRY_URL'] || VSX_REGISTRY_URL_DEFAULT;
+}

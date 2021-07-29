@@ -28,7 +28,8 @@ import {
     MenuModelRegistry, MenuContribution,
     MessageClient,
     InMemoryResources,
-    messageServicePath
+    messageServicePath,
+    InMemoryTextResourceResolver
 } from '../common';
 import { KeybindingRegistry, KeybindingContext, KeybindingContribution } from './keybinding';
 import { FrontendApplication, FrontendApplicationContribution, DefaultFrontendApplicationContribution } from './frontend-application';
@@ -54,7 +55,7 @@ import { LabelParser } from './label-parser';
 import { LabelProvider, LabelProviderContribution, DefaultUriLabelProviderContribution } from './label-provider';
 import { PreferenceService } from './preferences';
 import { ContextMenuRenderer } from './context-menu-renderer';
-import { ThemeService, BuiltinThemeProvider } from './theming';
+import { ThemeService } from './theming';
 import { ConnectionStatusService, FrontendConnectionStatusService, ApplicationConnectionStatusContribution, PingService } from './connection-status-service';
 import { DiffUriLabelProviderContribution } from './diff-uris';
 import { ApplicationServer, applicationPath } from '../common/application-protocol';
@@ -97,16 +98,15 @@ import { LanguageService } from './language-service';
 import { EncodingRegistry } from './encoding-registry';
 import { EncodingService } from '../common/encoding-service';
 import { AuthenticationService, AuthenticationServiceImpl } from '../browser/authentication-service';
+import { DecorationsService, DecorationsServiceImpl } from './decorations-service';
+import { keytarServicePath, KeytarService } from '../common/keytar-protocol';
+import { CredentialsService, CredentialsServiceImpl } from './credentials-service';
 
 export { bindResourceProvider, bindMessageService, bindPreferenceService };
 
 ColorApplicationContribution.initBackground();
 
 export const frontendApplicationModule = new ContainerModule((bind, unbind, isBound, rebind) => {
-    const themeService = ThemeService.get();
-    themeService.register(...BuiltinThemeProvider.themes);
-    themeService.startupTheme();
-
     bind(NoneIconTheme).toSelf().inSingletonScope();
     bind(LabelProviderContribution).toService(NoneIconTheme);
     bind(IconThemeService).toSelf().inSingletonScope();
@@ -191,6 +191,9 @@ export const frontendApplicationModule = new ContainerModule((bind, unbind, isBo
     bindResourceProvider(bind);
     bind(InMemoryResources).toSelf().inSingletonScope();
     bind(ResourceResolver).toService(InMemoryResources);
+
+    bind(InMemoryTextResourceResolver).toSelf().inSingletonScope();
+    bind(ResourceResolver).toService(InMemoryTextResourceResolver);
 
     bind(SelectionService).toSelf().inSingletonScope();
     bind(CommandRegistry).toSelf().inSingletonScope().onActivation(({ container }, registry) => {
@@ -342,4 +345,12 @@ export const frontendApplicationModule = new ContainerModule((bind, unbind, isBo
     bind(ContextMenuContext).toSelf().inSingletonScope();
 
     bind(AuthenticationService).to(AuthenticationServiceImpl).inSingletonScope();
+    bind(DecorationsService).to(DecorationsServiceImpl).inSingletonScope();
+
+    bind(KeytarService).toDynamicValue(ctx => {
+        const connection = ctx.container.get(WebSocketConnectionProvider);
+        return connection.createProxy<KeytarService>(keytarServicePath);
+    }).inSingletonScope();
+
+    bind(CredentialsService).to(CredentialsServiceImpl);
 });

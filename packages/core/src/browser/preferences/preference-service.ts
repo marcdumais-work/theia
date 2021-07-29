@@ -17,13 +17,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { injectable, inject, postConstruct } from 'inversify';
-import { Event, Emitter, DisposableCollection, Disposable, deepFreeze } from '../../common';
+import { Event, Emitter, DisposableCollection, Disposable, deepFreeze, unreachable } from '../../common';
 import { Deferred } from '../../common/promise-util';
 import { PreferenceProvider, PreferenceProviderDataChange, PreferenceProviderDataChanges, PreferenceResolveResult } from './preference-provider';
-import { PreferenceSchemaProvider, OverridePreferenceName } from './preference-contribution';
+import { PreferenceSchemaProvider } from './preference-contribution';
 import URI from '../../common/uri';
 import { PreferenceScope } from './preference-scope';
 import { PreferenceConfigurations } from './preference-configurations';
+import { JSONExt, JSONValue } from '@phosphor/coreutils/lib/json';
+import { OverridePreferenceName, PreferenceLanguageOverrideService } from './preference-language-override-service';
 
 export { PreferenceScope };
 
@@ -156,6 +158,18 @@ export interface PreferenceService extends Disposable {
      * with an error.
      */
     set(preferenceName: string, value: any, scope?: PreferenceScope, resourceUri?: string): Promise<void>;
+
+    /**
+     * Determines and applies the changes necessary to apply `value` to either the `resourceUri` supplied or the active session.
+     * If there is no setting for the `preferenceName`, the change will be applied in user scope.
+     * If there is a setting conflicting with the specified `value`, the change will be applied in the most specific scope with a conflicting value.
+     *
+     * @param preferenceName the identifier of the preference to modify.
+     * @param value the value to which to set the preference. `undefined` will reset the preference to its default value.
+     * @param resourceUri the uri of the resource to which the change is to apply. If none is provided, folder scope will be ignored.
+     */
+    updateValue(preferenceName: string, value: any, resourceUri?: string): Promise<void>
+
     /**
      * Registers a callback which will be called whenever a preference is changed.
      */
@@ -172,7 +186,7 @@ export interface PreferenceService extends Disposable {
      *
      * @return an object containing the value of the given preference for all scopes.
      */
-    inspect<T>(preferenceName: string, resourceUri?: string): PreferenceInspection<T> | undefined;
+    inspect<T extends JSONValue>(preferenceName: string, resourceUri?: string): PreferenceInspection<T> | undefined;
     /**
      * Returns a new preference identifier based on the given OverridePreferenceName.
      *
@@ -224,7 +238,7 @@ export interface PreferenceService extends Disposable {
 /**
  * Return type of the {@link PreferenceService.inspect} call.
  */
-export interface PreferenceInspection<T> {
+export interface PreferenceInspection<T = JSONValue> {
     /**
      * The preference identifier.
      */
@@ -244,8 +258,14 @@ export interface PreferenceInspection<T> {
     /**
      * Value in folder scope.
      */
-    workspaceFolderValue: T | undefined
+    workspaceFolderValue: T | undefined,
+    /**
+     * The value that is active, i.e. the value set in the lowest scope available.
+     */
+    value: T | undefined;
 }
+
+export type PreferenceInspectionScope = keyof Omit<PreferenceInspection<unknown>, 'preferenceName'>;
 
 /**
  * We cannot load providers directly in the case if they depend on `PreferenceService` somehow.
@@ -273,6 +293,9 @@ export class PreferenceServiceImpl implements PreferenceService {
 
     @inject(PreferenceConfigurations)
     protected readonly configurations: PreferenceConfigurations;
+
+    @inject(PreferenceLanguageOverrideService)
+    protected readonly preferenceOverrideService: PreferenceLanguageOverrideService;
 
     protected readonly preferenceProviders = new Map<PreferenceScope, PreferenceProvider>();
 
@@ -401,10 +424,7 @@ export class PreferenceServiceImpl implements PreferenceService {
     }
 
     async set(preferenceName: string, value: any, scope: PreferenceScope | undefined, resourceUri?: string): Promise<void> {
-        const resolvedScope = scope !== undefined ? scope : (!resourceUri ? PreferenceScope.Workspace : PreferenceScope.Folder);
-        if (resolvedScope === PreferenceScope.User && this.configurations.isSectionName(preferenceName.split('.', 1)[0])) {
-            throw new Error(`Unable to write to User Settings because ${preferenceName} does not support for global scope.`);
-        }
+        const resolvedScope = scope ?? (!resourceUri ? PreferenceScope.Workspace : PreferenceScope.Folder);
         if (resolvedScope === PreferenceScope.Folder && !resourceUri) {
             throw new Error('Unable to write to Folder Settings because no resource is provided.');
         }
@@ -412,7 +432,7 @@ export class PreferenceServiceImpl implements PreferenceService {
         if (provider && await provider.setPreference(preferenceName, value, resourceUri)) {
             return;
         }
-        throw new Error(`Unable to write to ${PreferenceScope.getScopeNames(resolvedScope)[0]} Settings.`);
+        throw new Error(`Unable to write to ${PreferenceScope[resolvedScope]} Settings.`);
     }
 
     getBoolean(preferenceName: string): boolean | undefined;
@@ -451,20 +471,17 @@ export class PreferenceServiceImpl implements PreferenceService {
         return Number(value);
     }
 
-    inspect<T>(preferenceName: string, resourceUri?: string): {
-        preferenceName: string,
-        defaultValue: T | undefined,
-        globalValue: T | undefined, // User Preference
-        workspaceValue: T | undefined, // Workspace Preference
-        workspaceFolderValue: T | undefined // Folder Preference
-    } | undefined {
+    inspect<T>(preferenceName: string, resourceUri?: string): PreferenceInspection<T> | undefined {
         const defaultValue = this.inspectInScope<T>(preferenceName, PreferenceScope.Default, resourceUri);
         const globalValue = this.inspectInScope<T>(preferenceName, PreferenceScope.User, resourceUri);
         const workspaceValue = this.inspectInScope<T>(preferenceName, PreferenceScope.Workspace, resourceUri);
         const workspaceFolderValue = this.inspectInScope<T>(preferenceName, PreferenceScope.Folder, resourceUri);
 
-        return { preferenceName, defaultValue, globalValue, workspaceValue, workspaceFolderValue };
+        const valueApplied = workspaceFolderValue ?? workspaceValue ?? globalValue ?? defaultValue;
+
+        return { preferenceName, defaultValue, globalValue, workspaceValue, workspaceFolderValue, value: valueApplied };
     }
+
     protected inspectInScope<T>(preferenceName: string, scope: PreferenceScope, resourceUri?: string): T | undefined {
         const value = this.doInspectInScope<T>(preferenceName, scope, resourceUri);
         if (value === undefined) {
@@ -476,11 +493,55 @@ export class PreferenceServiceImpl implements PreferenceService {
         return value;
     }
 
+    protected getScopedValueFromInspection<T>(inspection: PreferenceInspection<T>, scope: PreferenceScope): T | undefined {
+        switch (scope) {
+            case PreferenceScope.Default:
+                return inspection.defaultValue;
+            case PreferenceScope.User:
+                return inspection.globalValue;
+            case PreferenceScope.Workspace:
+                return inspection.workspaceValue;
+            case PreferenceScope.Folder:
+                return inspection.workspaceFolderValue;
+        }
+        unreachable(scope, 'Not all PreferenceScope enum variants handled.');
+    }
+
+    async updateValue(preferenceName: string, value: any, resourceUri?: string): Promise<void> {
+        const inspection = this.inspect<any>(preferenceName, resourceUri);
+        if (inspection) {
+            const scopesToChange = this.getScopesToChange(inspection, value);
+            const isDeletion = value === undefined
+                || (scopesToChange.length === 1 && scopesToChange[0] === PreferenceScope.User && JSONExt.deepEqual(value, inspection.defaultValue));
+            const effectiveValue = isDeletion ? undefined : value;
+            await Promise.all(scopesToChange.map(scope => this.set(preferenceName, effectiveValue, scope, resourceUri)));
+        }
+    }
+
+    protected getScopesToChange(inspection: PreferenceInspection<any>, intendedValue: any): PreferenceScope[] {
+        if (JSONExt.deepEqual(inspection.value, intendedValue)) {
+            return [];
+        }
+
+        // Scopes in ascending order of scope breadth.
+        const allScopes = PreferenceScope.getReversedScopes();
+        // Get rid of Default scope. We can't set anything there.
+        allScopes.pop();
+
+        const isScopeDefined = (scope: PreferenceScope) => this.getScopedValueFromInspection(inspection, scope) !== undefined;
+
+        if (intendedValue === undefined) {
+            return allScopes.filter(isScopeDefined);
+        }
+
+        return [allScopes.find(isScopeDefined) ?? PreferenceScope.User];
+    }
+
     overridePreferenceName(options: OverridePreferenceName): string {
-        return this.schema.overridePreferenceName(options);
+        return this.preferenceOverrideService.overridePreferenceName(options);
     }
     overriddenPreferenceName(preferenceName: string): OverridePreferenceName | undefined {
-        return this.schema.overriddenPreferenceName(preferenceName);
+        return this.preferenceOverrideService.overriddenPreferenceName(preferenceName);
     }
 
     protected doHas(preferenceName: string, resourceUri?: string): boolean {

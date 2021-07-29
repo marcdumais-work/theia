@@ -14,10 +14,10 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { injectable, postConstruct } from 'inversify';
 import { ReactWidget, StatefulWidget } from '@theia/core/lib/browser';
-import * as React from 'react';
-import { debounce } from 'lodash';
+import { injectable, postConstruct } from '@theia/core/shared/inversify';
+import * as React from '@theia/core/shared/react';
+import debounce = require('@theia/core/shared/lodash.debounce');
 import { Disposable, Emitter } from '@theia/core';
 
 export interface PreferencesSearchbarState {
@@ -119,7 +119,7 @@ export class PreferencesSearchbarWidget extends ReactWidget implements StatefulW
         return search?.value;
     }
 
-    protected updateSearchTerm(searchTerm: string): void {
+    updateSearchTerm(searchTerm: string): void {
         const search = document.getElementById(PreferencesSearchbarWidget.SEARCHBAR_ID) as HTMLInputElement;
         if (!search) {
             return;

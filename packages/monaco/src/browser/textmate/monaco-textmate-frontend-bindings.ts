@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { interfaces } from 'inversify';
+import { interfaces } from '@theia/core/shared/inversify';
 import { FrontendApplicationContribution, isBasicWasmSupported } from '@theia/core/lib/browser';
 import { bindContributionProvider } from '@theia/core';
 import { TextmateRegistry } from './textmate-registry';
@@ -23,27 +23,6 @@ import { MonacoTextmateService, OnigasmPromise } from './monaco-textmate-service
 import { MonacoThemeRegistry } from './monaco-theme-registry';
 import { loadWASM, OnigScanner, OnigString } from 'onigasm';
 import { IOnigLib } from 'vscode-textmate';
-
-export function fetchOnigasm(): Promise<ArrayBuffer> {
-    return new Promise((resolve, reject) => {
-        const onigasmPath = require('onigasm/lib/onigasm.wasm'); // webpack doing its magic here
-        const request = new XMLHttpRequest();
-
-        request.onreadystatechange = function (): void {
-            if (this.readyState === XMLHttpRequest.DONE) {
-                if (this.status === 200) {
-                    resolve(this.response);
-                } else {
-                    reject(new Error('Could not fetch onigasm'));
-                }
-            }
-        };
-
-        request.open('GET', onigasmPath, true);
-        request.responseType = 'arraybuffer';
-        request.send();
-    });
-}
 
 export class OnigasmLib implements IOnigLib {
     createOnigScanner(sources: string[]): OnigScanner {
@@ -55,15 +34,30 @@ export class OnigasmLib implements IOnigLib {
 }
 
 export default (bind: interfaces.Bind, unbind: interfaces.Unbind, isBound: interfaces.IsBound, rebind: interfaces.Rebind) => {
-    const onigasmPromise: Promise<IOnigLib> = isBasicWasmSupported ? fetchOnigasm().then(async buffer => {
-        await loadWASM(buffer);
-        return new OnigasmLib();
-    }) : Promise.reject(new Error('wasm not supported'));
-    bind(OnigasmPromise).toConstantValue(onigasmPromise);
-
+    bind(OnigasmPromise).toDynamicValue(dynamicOnigasmLib).inSingletonScope();
     bind(MonacoTextmateService).toSelf().inSingletonScope();
     bind(FrontendApplicationContribution).toService(MonacoTextmateService);
     bindContributionProvider(bind, LanguageGrammarDefinitionContribution);
     bind(TextmateRegistry).toSelf().inSingletonScope();
     bind(MonacoThemeRegistry).toDynamicValue(() => MonacoThemeRegistry.SINGLETON).inSingletonScope();
 };
+
+export async function dynamicOnigasmLib(ctx: interfaces.Context): Promise<IOnigLib> {
+    return createOnigasmLib();
+}
+
+export async function createOnigasmLib(): Promise<IOnigLib> {
+    if (!isBasicWasmSupported) {
+        throw new Error('wasm not supported');
+    }
+    const wasm = await fetchOnigasm();
+    await loadWASM(wasm);
+    return new OnigasmLib();
+}
+
+export async function fetchOnigasm(): Promise<ArrayBuffer> {
+    // Using Webpack's wasm loader should give us a URL to fetch the resource from:
+    const onigasmPath: string = require('onigasm/lib/onigasm.wasm');
+    const response = await fetch(onigasmPath, { method: 'GET' });
+    return response.arrayBuffer();
+}

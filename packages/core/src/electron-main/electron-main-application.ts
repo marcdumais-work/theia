@@ -15,7 +15,7 @@
  ********************************************************************************/
 
 import { inject, injectable, named } from 'inversify';
-import { screen, globalShortcut, app, BrowserWindow, BrowserWindowConstructorOptions, Event as ElectronEvent } from 'electron';
+import { screen, globalShortcut, app, BrowserWindow, BrowserWindowConstructorOptions, Event as ElectronEvent } from '../../shared/electron';
 import * as path from 'path';
 import { Argv } from 'yargs';
 import { AddressInfo } from 'net';
@@ -29,7 +29,7 @@ import { MaybePromise } from '../common/types';
 import { ContributionProvider } from '../common/contribution-provider';
 import { ElectronSecurityTokenService } from './electron-security-token-service';
 import { ElectronSecurityToken } from '../electron-common/electron-token';
-const Storage = require('electron-store');
+import Storage = require('electron-store');
 const createYargs: (argv?: string[], cwd?: string) => Argv = require('yargs/yargs');
 
 /**
@@ -225,7 +225,7 @@ export class ElectronMainApplication {
     }
 
     protected async getDefaultBrowserWindowOptions(): Promise<TheiaBrowserWindowOptions> {
-        const windowOptionsFromConfig = this.config.electron?.windowOptions || {};
+        const windowOptionsFromConfig = this.config.electron.windowOptions;
         let windowState: TheiaBrowserWindowOptions | undefined = this.electronStore.get('windowstate', undefined);
         if (!windowState) {
             windowState = this.getDefaultWindowState();

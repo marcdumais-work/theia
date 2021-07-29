@@ -36,6 +36,10 @@ export const COLLAPSED_CLASS = 'theia-mod-collapsed';
 export const BUSY_CLASS = 'theia-mod-busy';
 export const SELECTED_CLASS = 'theia-mod-selected';
 export const FOCUS_CLASS = 'theia-mod-focus';
+export const DEFAULT_SCROLL_OPTIONS: PerfectScrollbar.Options = {
+    suppressScrollX: true,
+    minScrollbarLength: 35,
+};
 
 @injectable()
 export class BaseWidget extends Widget {
@@ -203,7 +207,7 @@ export function addEventListener<K extends keyof HTMLElementEventMap>(
 ): Disposable {
     element.addEventListener(type, listener, useCapture);
     return Disposable.create(() =>
-        element.removeEventListener(type, listener)
+        element.removeEventListener(type, listener, useCapture)
     );
 }
 

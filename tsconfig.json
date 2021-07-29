@@ -58,6 +58,9 @@
       "@theia/editor/lib/*": [
         "packages/editor/src/*"
       ],
+      "@theia/external-terminal/lib/*": [
+        "packages/external-terminal/src/*"
+      ],
       "@theia/file-search/lib/*": [
         "packages/file-search/src/*"
       ],
@@ -174,6 +177,12 @@
       ],
       "@theia/property-view/lib/*": [
         "packages/property-view/src/*"
+      ],
+      "@theia/eslint-plugin/*": [
+        "dev-packages/eslint-plugin/*"
+      ],
+      "@theia/ovsx-client/lib/*": [
+        "dev-packages/ovsx-client/src/*"
       ]
     }
   }

@@ -17,7 +17,7 @@
 import * as path from 'path';
 import * as cp from 'child_process';
 import { injectable, inject } from 'inversify';
-import { Trace, IPCMessageReader, IPCMessageWriter, createMessageConnection, MessageConnection, Message } from 'vscode-jsonrpc';
+import { Trace, IPCMessageReader, IPCMessageWriter, createMessageConnection, MessageConnection, Message } from 'vscode-ws-jsonrpc';
 import { ILogger, ConnectionErrorHandler, DisposableCollection, Disposable } from '../../common';
 import { createIpcEnv } from './ipc-protocol';
 
@@ -83,9 +83,10 @@ export class IPCConnectionProvider {
             info: (message: string) => this.logger.info(`[${options.serverName}: ${childProcess.pid}] ${message}`),
             log: (message: string) => this.logger.info(`[${options.serverName}: ${childProcess.pid}] ${message}`)
         });
-        connection.trace(Trace.Off, {
+        const traceVerbosity = this.logger.isDebug() ? Trace.Verbose : Trace.Off;
+        connection.trace(traceVerbosity, {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            log: (message: any, data?: string) => this.logger.info(`[${options.serverName}: ${childProcess.pid}] ${message}` + (typeof data === 'string' ? ' ' + data : ''))
+            log: (message: any, data?: string) => this.logger.debug(`[${options.serverName}: ${childProcess.pid}] ${message}` + (typeof data === 'string' ? ' ' + data : ''))
         });
         return connection;
     }

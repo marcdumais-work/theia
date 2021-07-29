@@ -14,13 +14,13 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { injectable, inject, postConstruct } from 'inversify';
-import { Panel, Widget } from '@phosphor/widgets';
+import { injectable, inject, postConstruct } from '@theia/core/shared/inversify';
+import { Panel, Widget } from '@theia/core/shared/@phosphor/widgets';
 import { MenuModelRegistry } from '@theia/core/lib/common/menu';
 import { CommandRegistry } from '@theia/core/lib/common/command';
 import { ViewContextKeyService } from './view-context-key-service';
 import { StatefulWidget } from '@theia/core/lib/browser/shell/shell-layout-restorer';
-import { Message } from '@phosphor/messaging';
+import { Message } from '@theia/core/shared/@phosphor/messaging';
 import { TreeViewWidget } from './tree-view-widget';
 
 @injectable()
@@ -70,13 +70,15 @@ export class PluginViewWidget extends Panel implements StatefulWidget {
         return {
             label: this.title.label,
             message: this.message,
-            widgets: this.widgets
+            widgets: this.widgets,
+            suppressUpdateViewVisibility: this._suppressUpdateViewVisibility
         };
     }
 
     restoreState(state: PluginViewWidget.State): void {
         this.title.label = state.label;
         this.message = state.message;
+        this.suppressUpdateViewVisibility = state.suppressUpdateViewVisibility;
         for (const widget of state.widgets) {
             this.addWidget(widget);
         }
@@ -131,8 +133,9 @@ export class PluginViewWidget extends Panel implements StatefulWidget {
 }
 export namespace PluginViewWidget {
     export interface State {
-        label: string
-        message?: string;
-        widgets: ReadonlyArray<Widget>
+        label: string,
+        message?: string,
+        widgets: ReadonlyArray<Widget>,
+        suppressUpdateViewVisibility: boolean
     }
 }

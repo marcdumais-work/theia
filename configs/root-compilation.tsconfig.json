@@ -38,6 +38,9 @@
       "path": "../packages/editor/compile.tsconfig.json"
     },
     {
+      "path": "../packages/external-terminal/compile.tsconfig.json"
+    },
+    {
       "path": "../packages/file-search/compile.tsconfig.json"
     },
     {
@@ -141,6 +144,9 @@
     },
     {
       "path": "../packages/property-view/compile.tsconfig.json"
+    },
+    {
+      "path": "../dev-packages/ovsx-client/compile.tsconfig.json"
     }
   ]
 }

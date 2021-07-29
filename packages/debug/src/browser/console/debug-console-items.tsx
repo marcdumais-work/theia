@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import * as React from 'react';
+import * as React from '@theia/core/shared/react';
 import { DebugProtocol } from 'vscode-debugprotocol/lib/debugProtocol';
 import { SingleTextInputDialog } from '@theia/core/lib/browser';
 import { ConsoleItem, CompositeConsoleItem } from '@theia/console/lib/browser/console-session';
@@ -201,7 +201,7 @@ export class DebugVariable extends ExpressionContainer {
             this.elements = undefined;
             this.session['fireDidChange']();
         } catch (error) {
-            console.error(error);
+            console.error('setValue failed:', error);
         }
     }
 
@@ -232,6 +232,9 @@ export class DebugVariable extends ExpressionContainer {
     protected setNameRef = (nameRef: HTMLSpanElement | null) => this.nameRef = nameRef || undefined;
 
     async open(): Promise<void> {
+        if (!this.supportSetVariable) {
+            return;
+        }
         const input = new SingleTextInputDialog({
             title: `Set ${this.name} Value`,
             initialValue: this.value

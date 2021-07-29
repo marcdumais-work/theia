@@ -38,6 +38,8 @@ import { ExtPluginApi } from '../common/plugin-ext-api-contribution';
 import { RPCProtocol } from '../common/rpc-protocol';
 import { Emitter } from '@theia/core/lib/common/event';
 import { WebviewsExtImpl } from './webviews';
+import { URI as Uri } from './types-impl';
+import { SecretsExtImpl, SecretStorageExt } from '../plugin/secrets-ext';
 
 export interface PluginHost {
 
@@ -109,6 +111,7 @@ export class PluginManagerExtImpl implements PluginManagerExt, PluginManager {
         private readonly envExt: EnvExtImpl,
         private readonly terminalService: TerminalServiceExt,
         private readonly storageProxy: KeyValueStorageProxy,
+        private readonly secrets: SecretsExtImpl,
         private readonly preferencesManager: PreferenceRegistryExtImpl,
         private readonly webview: WebviewsExtImpl,
         private readonly rpc: RPCProtocol
@@ -343,16 +346,21 @@ export class PluginManagerExtImpl implements PluginManagerExt, PluginManager {
         const asAbsolutePath = (relativePath: string): string => join(plugin.pluginFolder, relativePath);
         const logPath = join(configStorage.hostLogPath, plugin.model.id); // todo check format
         const storagePath = configStorage.hostStoragePath ? join(configStorage.hostStoragePath, plugin.model.id) : undefined;
+        const secrets = new SecretStorageExt(plugin, this.secrets);
         const globalStoragePath = join(configStorage.hostGlobalStoragePath, plugin.model.id);
         const pluginContext: theia.PluginContext = {
             extensionPath: plugin.pluginFolder,
+            extensionUri: Uri.file(plugin.pluginFolder),
             globalState: new Memento(plugin.model.id, true, this.storageProxy),
             workspaceState: new Memento(plugin.model.id, false, this.storageProxy),
             subscriptions: subscriptions,
             asAbsolutePath: asAbsolutePath,
             logPath: logPath,
             storagePath: storagePath,
+            storageUri: storagePath ? Uri.file(storagePath) : undefined,
+            secrets,
             globalStoragePath: globalStoragePath,
+            globalStorageUri: Uri.file(globalStoragePath),
             environmentVariableCollection: this.terminalService.getEnvironmentVariableCollection(plugin.model.id)
         };
         this.pluginContextsMap.set(plugin.model.id, pluginContext);
