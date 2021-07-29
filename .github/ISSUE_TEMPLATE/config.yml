@@ -3,3 +3,6 @@ contact_links:
   - name: Question
     url:  https://github.com/eclipse-theia/theia/discussions
     about: Please ask questions here.
+  - name: security vulnerability report
+    url: https://bugs.eclipse.org/bugs/enter_bug.cgi?product=Community&component=Vulnerability%20Reports&keywords=security&groups=Security_Advisories
+    about: Please report security-related issues directly to the Eclipse Foundation. See our project's [SECURITY.md](https://github.com/eclipse-theia/theia/SECURITY.md) for more details
