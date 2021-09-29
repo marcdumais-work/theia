@@ -1,6 +1,6 @@
 {
   "name": "@theia/cli",
-  "version": "1.18.6",
+  "version": "1.18.7",
   "description": "Theia CLI.",
   "publishConfig": {
     "access": "public"
@@ -29,9 +29,9 @@
     "clean": "theiaext clean"
   },
   "dependencies": {
-    "@theia/application-manager": "1.18.6",
-    "@theia/application-package": "1.18.6",
-    "@theia/ovsx-client": "1.18.6",
+    "@theia/application-manager": "1.18.7",
+    "@theia/application-package": "1.18.7",
+    "@theia/ovsx-client": "1.18.7",
     "@types/chai": "^4.2.7",
     "@types/mkdirp": "^0.5.2",
     "@types/mocha": "^5.2.7",

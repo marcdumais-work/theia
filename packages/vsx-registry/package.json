@@ -1,15 +1,15 @@
 {
   "name": "@theia/vsx-registry",
-  "version": "1.18.6",
+  "version": "1.18.7",
   "description": "Theia - VSX Registry",
   "dependencies": {
-    "@theia/core": "1.18.6",
-    "@theia/filesystem": "1.18.6",
-    "@theia/ovsx-client": "1.18.6",
-    "@theia/plugin-ext": "1.18.6",
-    "@theia/plugin-ext-vscode": "1.18.6",
-    "@theia/preferences": "1.18.6",
-    "@theia/workspace": "1.18.6",
+    "@theia/core": "1.18.7",
+    "@theia/filesystem": "1.18.7",
+    "@theia/ovsx-client": "1.18.7",
+    "@theia/plugin-ext": "1.18.7",
+    "@theia/plugin-ext-vscode": "1.18.7",
+    "@theia/preferences": "1.18.7",
+    "@theia/workspace": "1.18.7",
     "@types/bent": "^7.0.1",
     "@types/sanitize-html": "^2.3.1",
     "@types/showdown": "^1.7.1",
@@ -55,7 +55,7 @@
     "watch": "theiaext watch"
   },
   "devDependencies": {
-    "@theia/ext-scripts": "1.18.6"
+    "@theia/ext-scripts": "1.18.7"
   },
   "nyc": {
     "extends": "../../configs/nyc.json"
