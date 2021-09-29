@@ -1,12 +1,12 @@
 {
   "name": "@theia/plugin-metrics",
-  "version": "1.18.4",
+  "version": "1.18.5",
   "description": "Theia - Plugin Metrics",
   "dependencies": {
-    "@theia/core": "1.18.4",
-    "@theia/metrics": "1.18.4",
-    "@theia/plugin": "1.18.4",
-    "@theia/plugin-ext": "1.18.4"
+    "@theia/core": "1.18.5",
+    "@theia/metrics": "1.18.5",
+    "@theia/plugin": "1.18.5",
+    "@theia/plugin-ext": "1.18.5"
   },
   "publishConfig": {
     "access": "public"
@@ -42,7 +42,7 @@
     "watch": "theiaext watch"
   },
   "devDependencies": {
-    "@theia/ext-scripts": "1.18.4"
+    "@theia/ext-scripts": "1.18.5"
   },
   "nyc": {
     "extends": "../../configs/nyc.json"
