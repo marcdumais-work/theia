@@ -33,7 +33,6 @@ import {
 import { UriComponents } from './uri-components';
 import {
     SerializedDocumentFilter,
-    CompletionContext,
     MarkdownString,
     Range,
     Completion,
@@ -60,7 +59,6 @@ import {
     Breakpoint,
     ColorPresentation,
     RenameLocation,
-    SignatureHelpContext,
     CodeAction,
     CodeActionContext,
     FoldingContext,
@@ -109,6 +107,7 @@ import { ThemeType } from '@theia/core/lib/common/theme';
 import { Disposable } from '@theia/core/lib/common/disposable';
 import { PickOptions, QuickInputButtonHandle } from '@theia/core/lib/common';
 import { Severity } from '@theia/core/lib/common/severity';
+import { languages } from '@theia/monaco-editor-core';
 
 export interface PreferenceData {
     [scope: number]: any;
@@ -1504,7 +1503,7 @@ export interface LanguageStatus {
 
 export interface LanguagesExt {
     $provideCompletionItems(handle: number, resource: UriComponents, position: Position,
-        context: CompletionContext, token: CancellationToken): Promise<CompletionResultDto | undefined>;
+        context: languages.CompletionContext, token: CancellationToken): Promise<CompletionResultDto | undefined>;
     $resolveCompletionItem(handle: number, chainedId: ChainedCacheId, token: CancellationToken): Promise<Completion | undefined>;
     $releaseCompletionItems(handle: number, id: number): void;
     $provideImplementation(handle: number, resource: UriComponents, position: Position, token: CancellationToken): Promise<Definition | undefined>;
@@ -1513,7 +1512,7 @@ export interface LanguagesExt {
     $provideDeclaration(handle: number, resource: UriComponents, position: Position, token: CancellationToken): Promise<Definition | undefined>;
     $provideReferences(handle: number, resource: UriComponents, position: Position, context: ReferenceContext, token: CancellationToken): Promise<Location[] | undefined>;
     $provideSignatureHelp(
-        handle: number, resource: UriComponents, position: Position, context: SignatureHelpContext, token: CancellationToken
+        handle: number, resource: UriComponents, position: Position, context: languages.SignatureHelpContext, token: CancellationToken
     ): Promise<SignatureHelp | undefined>;
     $releaseSignatureHelp(handle: number, id: number): void;
     $provideHover(handle: number, resource: UriComponents, position: Position, token: CancellationToken): Promise<Hover | undefined>;

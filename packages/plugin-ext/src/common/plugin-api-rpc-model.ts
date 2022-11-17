@@ -89,7 +89,7 @@ export enum CompletionTriggerKind {
 
 export interface CompletionContext {
     triggerKind: CompletionTriggerKind;
-    triggerCharacter?: string;
+    triggerCharacter: string | undefined;
 }
 
 export enum CompletionItemInsertTextRule {
@@ -241,9 +241,9 @@ export interface SignatureHelp extends IdObject {
 
 export interface SignatureHelpContext {
     triggerKind: theia.SignatureHelpTriggerKind;
-    triggerCharacter?: string;
+    triggerCharacter: string | undefined;
     isRetrigger: boolean;
-    activeSignatureHelp?: SignatureHelp;
+    activeSignatureHelp: SignatureHelp | undefined;
 }
 
 export interface Hover {

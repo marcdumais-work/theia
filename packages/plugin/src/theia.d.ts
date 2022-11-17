@@ -2974,7 +2974,7 @@ export module '@theia/plugin' {
         /**
          * Environment variables for terminal in format key - value.
          */
-        env?: { [key: string]: string | null };
+        env?: { [key: string]: string | null | undefined};
 
         /**
          * Whether the terminal process environment should be exactly as provided in
@@ -3952,7 +3952,7 @@ export module '@theia/plugin' {
          * Editor position of the panel. This property is only set if the webview is in
          * one of the editor view columns.
          */
-        readonly viewColumn?: ViewColumn;
+        readonly viewColumn: ViewColumn | undefined;
 
         /**
          * Whether the panel is active (focused by the user).
@@ -4218,13 +4218,13 @@ export module '@theia/plugin' {
          * If this is provided, your extension should restore the editor from the backup instead of reading the file
          * from the user's workspace.
          */
-        readonly backupId?: string;
+        readonly backupId: string | undefined;
         /**
          * If the URI is an untitled file, this will be populated with the byte data of that file.
          *
          * If this is provided, your extension should utilize this byte data rather than executing fs APIs on the URI passed in.
          */
-        readonly untitledDocumentData?: Uint8Array;
+        readonly untitledDocumentData: Uint8Array | undefined;
     }
 
     /**
@@ -7259,7 +7259,7 @@ export module '@theia/plugin' {
          * This is `undefined` when signature help is not triggered by typing, such as when manually invoking
          * signature help or when moving the cursor.
          */
-        readonly triggerCharacter?: string;
+        readonly triggerCharacter: string | undefined;
 
         /**
          * `true` if signature help was already showing when it was triggered.
@@ -7275,7 +7275,7 @@ export module '@theia/plugin' {
          * The `activeSignatureHelp` has its [`SignatureHelp.activeSignature`] field updated based on
          * the user arrowing through available signatures.
          */
-        readonly activeSignatureHelp?: SignatureHelp;
+        readonly activeSignatureHelp: SignatureHelp | undefined;
     }
 
     /**
@@ -7351,7 +7351,7 @@ export module '@theia/plugin' {
          *
          * The trigger character is already in the document when the completion provider is triggered.
          */
-        readonly triggerCharacter?: string;
+        readonly triggerCharacter: string | undefined;
     }
 
     /**
@@ -8967,7 +8967,7 @@ export module '@theia/plugin' {
          *
          * Actions not of this kind are filtered out before being shown by the lightbulb.
          */
-        readonly only?: CodeActionKind;
+        readonly only: CodeActionKind | undefined;
     }
 
     /**
@@ -10706,7 +10706,7 @@ export module '@theia/plugin' {
         /**
          * Event specific information.
          */
-        readonly body?: any;
+        readonly body: any | undefined;
     }
 
     /**
@@ -10899,7 +10899,7 @@ export module '@theia/plugin' {
         /**
          * The host.
          */
-        readonly host?: string;
+        readonly host?: string | undefined;
 
         /**
          * Create a description for a debug adapter running as a socket based server.
@@ -11047,15 +11047,15 @@ export module '@theia/plugin' {
         /**
          * An optional expression for conditional breakpoints.
          */
-        readonly condition?: string;
+        readonly condition?: string | undefined;
         /**
          * An optional expression that controls how many hits of the breakpoint are ignored.
          */
-        readonly hitCondition?: string;
+        readonly hitCondition?: string | undefined;
         /**
          * An optional message that gets logged when this breakpoint is hit. Embedded expressions within {} are interpolated by the debug adapter.
          */
-        readonly logMessage?: string;
+        readonly logMessage?: string | undefined;
 
         protected constructor(enabled?: boolean, condition?: string, hitCondition?: string, logMessage?: string);
     }
@@ -11381,7 +11381,7 @@ export module '@theia/plugin' {
         /**
          * The shell command line. Is `undefined` if created with a command and arguments.
          */
-        commandLine?: string;
+        commandLine: string | undefined;
 
         /**
          * The shell options used when the command line is executed in a shell.
@@ -11630,7 +11630,7 @@ export module '@theia/plugin' {
         definition: TaskDefinition;
 
         /** The task's scope. */
-        scope?: TaskScope.Global | TaskScope.Workspace | WorkspaceFolder;
+        scope: TaskScope.Global | TaskScope.Workspace | WorkspaceFolder | undefined;
 
         /** The task's execution engine */
         execution?: ProcessExecution | ShellExecution | CustomExecution;
