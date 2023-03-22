@@ -47,7 +47,7 @@ jobs:
           yarn lint
 
   build:
-    name: Build and Test (${{ matrix.os }}, node-${{ matrix.node }})
+    name: Build and Test - quick test...
 
     strategy:
       fail-fast: false
