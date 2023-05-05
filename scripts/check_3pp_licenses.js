@@ -247,7 +247,7 @@ function getErrorFromStatus(status) {
         return `Command ${prettyCommand(status)} exited with signal: ${status.signal}`;
     } else if (status.status !== 0) {
         if (status.status == dashLicensesInternalError) {
-            return `dash-licenses encountered an internal error, code: ${status.status}. Command: Command ${prettyCommand(status)}`;
+            return `Command ${prettyCommand(status)} exit code (${status.status}) means dash-licenses has encountered an internal error`;
         }
         return `Command ${prettyCommand(status)} exited with code: ${status.status}`;
     }
