@@ -21,7 +21,7 @@ of the Eclipse Public License v. 2.0 which is available at
 https://www.eclipse.org/legal/epl-2.0. This Source Code may also be made
 available under the following Secondary Licenses when the conditions for such
 availability set forth in the Eclipse Public License v. 2.0 are satisfied:
-(secondary) GPL-2.0 with Classpath-exception-2.0 which is available at GNU
+(secondary) GPL-2.0 with Classpath-exception which is available at GNU
 General Public License v2.0 w/Classpath exception',
 'https://www.gnu.org/software/classpath/license.html.
 
